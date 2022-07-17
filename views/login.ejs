@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/login.css">
+    <title>Login</title>
+</head>
+<body>
+    <h1>Login</h1>
+    <form action="/login" method="post"> 
+        <div class="title">Enter your wallet address</div>
+        <div>
+            <input type="text" name="address" id="address" class="input-text">
+        </div>
+        <div class="error">
+            <% if (error == 1) { %>
+                Login failed. Wallet not found. 
+            <% } %> 
+        </div>
+        <button type="submit" name="submit" class="button-1">Login</button>
+    </form>
+</body>
+</html>

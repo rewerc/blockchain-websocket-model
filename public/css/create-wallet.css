@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300&family=Supermercado+One&display=swap');
+
+body {
+    margin: 0;
+    background-color: rgb(141, 6, 80);
+    text-align: center;
+}
+
+h1 {
+    font-family: 'Supermercado One', cursive;
+    color: white;
+    font-size: 4em;
+    margin-top: 150px;
+    user-select: none;
+}
+
+.button-1 {
+    border: 0;
+    font-size: 1.8em;
+    border-radius: 20px 2px 20px 2px;
+    padding: 15px 30px;
+    cursor: pointer;
+    background-color: rgb(48, 48, 48);
+    color: white;
+    font-family: 'Oswald', sans-serif;
+    user-select: none;
+}
+
+.button-1:hover {
+    background-color: rgb(36, 36, 36);
+}
+.button-1:active {
+    background-color: rgb(15, 15, 15);
+}
+
+.title {
+    width: 30%;
+    border: 2px solid rgb(48, 48, 48);
+    background-color: rgb(48, 48, 48);
+    padding: 2% 1%;
+    color: white;
+    font-family: 'Oswald';
+    margin: 30px auto 0 auto;
+    border-radius: 10px 10px 0 0;
+    font-size: 1.7em;
+}
+
+.keys {
+    width: 30%;
+    border: 2px solid rgb(48, 48, 48);
+    padding: 2% 1%;
+    color: white;
+    font-family: 'Oswald';
+    margin: 0 auto 10px auto;
+    border-radius: 0 0 10px 10px;
+    word-wrap: break-word;
+}

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Wallet</title>
+    <link rel="stylesheet" href="css/create-wallet.css">
+</head>
+<body id="body">
+    <h1>Create Wallet</h1>
+
+    <button id="create" class="button-1">
+        CREATE NOW
+    </button>
+
+    <div id="newAddr"></div>
+
+</body>
+    <script>
+        document.getElementById("create").addEventListener("click", function() {
+            const xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                    document.getElementById("create").remove();
+                    let res = JSON.parse(this.responseText);
+                    document.getElementById("newAddr").innerHTML = `
+                    <div class="title">Private key</div>
+                    <div class="keys">${res[0]}</div>
+                    <div class="title">Public Key</div>
+                    <div class="keys">${res[1]}</div>`;
+
+                    const form = document.createElement("form");
+                    const cont = document.createElement("button"); 
+                    cont.setAttribute("class", "button-1");
+                    form.setAttribute("action", "/login");
+                    form.setAttribute("method", "get");
+                    cont.appendChild(document.createTextNode("Continue"));
+                    form.appendChild(cont);
+
+                    document.getElementById("body").appendChild(form);
+                    
+                }
+            };
+            xhr.open("POST", "/create-wallet", true);
+            xhr.send();
+        });
+    </script>
+</html>

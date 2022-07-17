@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="css/index.css">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User</title>
+<body>
+    <div id="sidebar">
+        <div id="notifications">
+            <div style="padding: 3% 0">Notifications</div>
+            <div id="notifList"></div>
+        </div>
+        <div style="height: 2vh; background-color: rgb(48, 48, 48)"></div>
+        <div id="pendings">
+            <div style="padding: 3% 0">Pending</div>
+            <div id="myPendings">
+
+            </div>
+        </div>
+    </div>
+    <div class="main">
+        <div></div>
+        <div>
+            <h2 id="onlinePeers" class="keys"></h2>
+            <h1>Welcome to your wallet</h1>
+            <div class="keys" id="publicKey"><%= publicKey %></div>
+        
+            <div class="balanceCon">
+                <div class="balanceLabel">BALANCE</div> 
+                <div id="balance" class="balance"></div>
+            </div>
+        
+            <div class="transaction">
+                <div class="transactionTitle">
+                    Transaction
+                </div>
+                <div class="input-container">
+                    <div class="transactionComponent">
+                        <label for="toAddress">TO</label>
+                    </div>
+                    <div class="transactionComponent">
+                        <input type="text" name="toAddress" id="toAddress" class="input-text">
+                    </div>
+                    <div class="transactionComponent">
+                        <label for="amount">AMOUNT </label>
+                    </div>
+                    <div class="transactionComponent">
+                        <input type="text" name="amount" id="amount" class="input-text">
+                    </div>
+                    <div class="transactionComponent">
+                        <label for="private-key">PRIVATE </label>
+                    </div>
+                    <div class="transactionComponent">
+                        <input type="text" name="privateKey" id="private-key" class="input-text">
+                    </div>
+                    <div class="transactionComponent">
+                        <label for="data-hash">DATA HASH </label>
+                    </div>
+                    <div class="transactionComponent">
+                        <input type="text" name="dataHash" id="data-hash" class="input-text">
+                    </div>
+                    <div class="transactionComponent">
+                        <button onclick="sendTransaction()" class="button-1">Send</button>
+                    </div>
+                    <div class="transactionComponent" id="error"></div>
+                </div>
+            </div>
+            
+            <div class="historyTitle">Transaction History</div>
+            <div id="history">
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        const publicKey = "<%= publicKey %>";
+        const errCon = document.getElementById("error");
+        const socket = new WebSocket(location.origin.replace(/^http/, 'ws') + "/client");
+        const history = document.getElementById("history");
+        let clickable = true;
+        let pendingTransaction = [];
+        let chain = localStorage.getItem("chain") ? JSON.parse(localStorage.getItem("chain")) : [];
+        
+        function createDiv(string) {
+            const textNode = document.createTextNode(string);
+            const div = document.createElement("div");
+            div.appendChild(textNode);
+            return div;
+        }
+
+        function createElement(element, string) {
+            const textNode = document.createTextNode(string);
+            element = document.createElement(element);
+            element.appendChild(textNode);
+            return element;
+        }
+
+        function addClass(element, classes) {
+            for (const cl of classes) {
+                element.classList.add(cl);
+            }
+            return element;
+        }
+
+        function calculateBalance() {
+            let balance = 100;
+            for (const block of chain) {
+                if (block._id === 1) continue;
+                const trans = block.transaction;
+                if (trans.fromAddress === publicKey) balance -= parseFloat(trans.amount);
+                if (trans.toAddress === publicKey) balance += parseFloat(trans.amount);
+            }
+            for (const trans of pendingTransaction) {
+                if (trans.fromAddress === publicKey) balance -= parseFloat(trans.amount);
+            }
+            document.getElementById("balance").innerHTML = balance;
+        }
+
+        function addHistory(trans) {
+            if (trans.fromAddress === publicKey || trans.toAddress === publicKey) {
+                let transHist = document.createElement("div");
+                transHist.setAttribute("class", "transHist");
+                transHist.appendChild(createDiv("Sender"));
+                transHist.appendChild(createDiv(trans.fromAddress));
+                transHist.appendChild(createDiv("Receiver"));
+                transHist.appendChild(createDiv(trans.toAddress));
+                transHist.appendChild(createDiv("Amount"));
+                transHist.appendChild(createDiv(trans.amount));
+                transHist.appendChild(createDiv("Timestamp"));
+                transHist.appendChild(createDiv(trans.timestamp));
+                if (trans.data.hash) {
+                    transHist.appendChild(createDiv("Data"));
+                    transHist.appendChild(createDiv(trans.data.hash));
+                }
+                history.prepend(transHist);
+            }
+        }
+
+        function displayTransactions(pendingTransaction) {
+            const notifList = document.getElementById("notifList");
+            notifList.innerHTML = "";
+            for (const trans of pendingTransaction) {
+                console.log(trans.witness);
+                if (trans.witness.includes(publicKey)) continue;
+                let notif = addClass(document.createElement("div"), ["notif"]);
+                notif.setAttribute("id", trans.hash);
+                let info = addClass(document.createElement("div"), ["information"]);
+                info.appendChild(createDiv(`Sender: ${trans.fromAddress}`));
+                info.appendChild(createDiv(`Receiver: ${trans.toAddress}`));
+                info.appendChild(createDiv(`Amount: ${trans.amount}`));
+                info.appendChild(createDiv(`Timestamp: ${trans.timestamp}`));
+                info.appendChild(createDiv(`Witness: ${trans.witness.length}`));
+                if (trans.data.hash) info.appendChild(createDiv(`Data: ${trans.data.hash}`));
+                notif.appendChild(info);
+                const confirmBtn = addClass(createElement("button", "Confirm"), ["confirm", "notif-button"]);
+                confirmBtn.setAttribute("value", trans.hash)
+                notif.appendChild(confirmBtn);
+                notifList.prepend(notif);
+            }
+            for (const confirmBtn of document.getElementsByClassName("confirm")) {
+                confirmBtn.addEventListener("click", function() {
+                    if (clickable) {
+                        console.log("hello");
+                        clickable = false;
+                        socket.send(JSON.stringify({
+                            type: "witness", 
+                            message: {
+                                witness: publicKey,
+                                hash: this.value
+                            }
+                        }));
+                        document.getElementById(this.value).remove();
+                        setTimeout(() => {
+                            clickable = true;
+                        }, 500);
+                    }
+                });
+            }
+        }
+
+        let myPendings = [];
+        function displayMyPendings(myPendings) {
+            myPendings = [];
+            for (const trans of pendingTransaction) {
+                if (publicKey === trans.fromAddress) myPendings.push(trans);
+                if (trans.fromAddress === publicKey) balance -= parseFloat(trans.amount);
+            }
+            const pendingList = document.getElementById("myPendings");
+            pendingList.innerHTML = "";
+            let index = 0;
+            for (const trans of myPendings) {
+                let notif = addClass(document.createElement("div"), ["notif"]);
+                let info = addClass(document.createElement("div"), ["information"]);
+                info.appendChild(createDiv(`To: ${trans.toAddress}`));
+                info.appendChild(createDiv(`Amount: ${trans.amount}`));
+                info.appendChild(createDiv(`Timestamp: ${trans.timestamp}`));
+                info.appendChild(createDiv(`Witness: ${trans.witness.length}`));
+                notif.appendChild(info);
+                pendingList.prepend(notif);
+                index++;
+            }
+        }
+
+        socket.addEventListener("open", function (event) {
+            console.log("Connected to socket server");
+            const maxLocalBlock = localStorage.getItem("chain") ? chain.length : 0;
+            socket.send(JSON.stringify({
+                type: "get-blocks",
+                message: {
+                    number: maxLocalBlock
+                }
+            }));
+        });
+
+        socket.addEventListener("close", function () {
+            console.log("Socket connection closed");
+            alert("SOCKET CONNECTION CLOSED");
+        });
+
+        socket.addEventListener("message", function (event) {
+            const jsonData = JSON.parse(event.data);
+
+            if (jsonData.type === "online-peers") {
+                document.getElementById("onlinePeers").innerHTML = `${jsonData.onlinePeers} ONLINE`;
+            
+            } else if (jsonData.type === "latest-pending") {
+                if (jsonData.message) pendingTransaction.push(jsonData.message);
+                calculateBalance();
+                displayTransactions(pendingTransaction);
+                displayMyPendings(pendingTransaction);
+
+            } else if (jsonData.type === "update-witness") {
+                const hash = jsonData.message.hash;
+                const witness = jsonData.message.witness;
+                for (const trans of pendingTransaction) {
+                    if (trans.hash === hash) {
+                        trans.witness = witness;
+                    }
+                }
+                displayTransactions(pendingTransaction);
+                displayMyPendings(pendingTransaction);
+
+            } else if (jsonData.type === "created-block") {
+                const hash = jsonData.message.hash;
+                const block = jsonData.message.block;
+                if (chain.some(blk => blk.hash === block.hash || blk._id.toString() === block._id.toString())) return;
+                pendingTransaction = pendingTransaction.filter(tx => tx.hash !== hash);
+                chain.push(block);
+                addHistory(block.transaction);
+                calculateBalance();
+                displayTransactions(pendingTransaction);
+                displayMyPendings(pendingTransaction);
+                localStorage.setItem("chain", JSON.stringify(chain));
+            
+            } else if (jsonData.type === "blocks") {
+                const isReset = jsonData.message.reset;
+                if (isReset) {
+                    chain = jsonData.message.blocks;
+                } else {
+                    chain = [...chain, ...jsonData.message.blocks];
+                }
+                pendingTransaction = jsonData.message.pendingTransactions;
+                localStorage.setItem("chain", JSON.stringify(chain));
+                for (const block of chain) {
+                    if (block._id === 1) continue;
+                    addHistory(block.transaction);
+                }
+                calculateBalance();
+                displayTransactions(pendingTransaction);
+                displayMyPendings(pendingTransaction);
+            
+            } else if (jsonData.type === "error") {
+                errCon.innerHTML = jsonData.message;
+                setTimeout(() => {
+                    errCon.innerHTML = "";
+                }, 2000);
+
+            }
+        });
+
+        const sendTransaction = () => {
+            const privateKey = document.getElementById("private-key").value;
+            const toAddr = document.getElementById("toAddress").value;
+            const amount = parseFloat(document.getElementById("amount").value);
+            let dataHash = document.getElementById("data-hash").value;
+            if (!dataHash) dataHash = "";
+            if (toAddr && amount && privateKey && typeof amount === "number") {
+                socket.send(JSON.stringify({
+                    type: "transaction",
+                    message: {
+                        fromAddress: publicKey,
+                        toAddress: toAddr,
+                        amount: amount,
+                        privateKey: privateKey,
+                        data: JSON.stringify({
+                            hash: dataHash,
+                            org: "default"
+                        })
+                    }
+                }));
+            }
+        }
+    </script>
+</body>
+</html>
+
+
